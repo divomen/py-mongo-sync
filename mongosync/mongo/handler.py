@@ -91,13 +91,13 @@ class MongoHandler(object):
                     while True:
                         try:
                             if isinstance(req, pymongo.ReplaceOne):
-                                mc[dbname][collname].replace_one(req._filter, req._doc, upsert=req._upsert)
+                                self._mc[dbname][collname].replace_one(req._filter, req._doc, upsert=req._upsert)
                             elif isinstance(req, pymongo.InsertOne):
-                                mc[dbname][collname].insert_one(req._doc)
+                                self._mc[dbname][collname].insert_one(req._doc)
                             elif isinstance(req, pymongo.UpdateOne):
-                                mc[dbname][collname].update_one(req._filter, req._doc, upsert=req._upsert)
+                                self._mc[dbname][collname].update_one(req._filter, req._doc, upsert=req._upsert)
                             elif isinstance(req, pymongo.DeleteOne):
-                                mc[dbname][collname].delete_one(req._filter)
+                                self._mc[dbname][collname].delete_one(req._filter)
                             else:
                                 log.error('invalid req: %s' % req)
                                 sys.exit(1)
