@@ -312,7 +312,7 @@ class MongoSyncer(CommonSyncer):
                     if self._stage == Stage.post_initial_sync:
                         if self._multi_oplog_replayer:
                             if mongo_utils.is_command(oplog):
-                                self._multi_oplog_replayer.apply(ignore_duplicate_key_error=True)
+                                self._multi_oplog_replayer.apply(ignore_duplicate_key_error=True, print_log=True)
                                 self._multi_oplog_replayer.clear()
                                 self._dst.apply_oplog(oplog)
                                 self._last_optime = oplog['ts']
@@ -322,12 +322,12 @@ class MongoSyncer(CommonSyncer):
                                 if oplog['ts'] == self._initial_sync_end_optime \
                                         or self._multi_oplog_replayer.count() >= self._oplog_batchsize \
                                         or time.time() - self._multi_oplog_replayer._last_apply_time > 3:
-                                    self._multi_oplog_replayer.apply(ignore_duplicate_key_error=True)
+                                    self._multi_oplog_replayer.apply(ignore_duplicate_key_error=True, print_log=True)
                                     self._multi_oplog_replayer.clear()
                                     self._last_optime = oplog['ts']
                                     need_log = True
                         else:
-                            self._dst.apply_oplog(oplog, ignore_duplicate_key_error=True)
+                            self._dst.apply_oplog(oplog, ignore_duplicate_key_error=True, print_log=True)
                             self._last_optime = oplog['ts']
                             need_log = True
 

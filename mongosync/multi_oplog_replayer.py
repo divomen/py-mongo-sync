@@ -54,7 +54,7 @@ class MultiOplogReplayer(object):
         self._count += 1
         self._last_optime = oplog['ts']
 
-    def apply(self, ignore_duplicate_key_error=False):
+    def apply(self, ignore_duplicate_key_error=False, print_log=False):
         """ Apply oplogs.
         """
         oplog_vecs = []
@@ -85,7 +85,7 @@ class MultiOplogReplayer(object):
                                  vec._dbname,
                                  vec._collname,
                                  vec._oplogs,
-                                 ignore_duplicate_key_error=ignore_duplicate_key_error)
+                                 ignore_duplicate_key_error=ignore_duplicate_key_error, print_log=print_log)
         self._pool.join()
         self._last_apply_time = time.time()
 

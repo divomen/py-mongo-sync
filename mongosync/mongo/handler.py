@@ -72,10 +72,11 @@ class MongoHandler(object):
                 log.error('%s' % e)
                 self.reconnect()
 
-    def bulk_write(self, dbname, collname, reqs, ordered=True, ignore_duplicate_key_error=False):
+    def bulk_write(self, dbname, collname, reqs, ordered=True, ignore_duplicate_key_error=False, print_log=False):
         """ Bulk write until success.
         """
-        log.info('Process %d ops on %s.%s' % (len(reqs), dbname, collname))
+        if print_log:
+            log.info('Process %d ops on %s.%s' % (len(reqs), dbname, collname))
         while True:
             try:
                 self._mc[dbname][collname].bulk_write(reqs,
@@ -148,7 +149,7 @@ class MongoHandler(object):
         #     cursor.max_await_time_ms(1000)
         return cursor
 
-    def apply_oplog(self, oplog, ignore_duplicate_key_error=False):
+    def apply_oplog(self, oplog, ignore_duplicate_key_error=False, print_log=False):
         """ Apply oplog.
         """
         dbname, collname = mongo_utils.parse_namespace(oplog['ns'])
