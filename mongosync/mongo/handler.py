@@ -82,17 +82,19 @@ class MongoHandler(object):
                 self._mc[dbname][collname].bulk_write(reqs,
                                                       ordered=ordered,
                                                       bypass_document_validation=False)
+                if print_log:
+                    log.info('Processed %d ops on %s.%s' % (len(reqs), dbname, collname))
                 return
             except pymongo.errors.AutoReconnect as e:
                 log.error('%s' % e)
                 self.reconnect()
             except Exception as e:
-                log.error('bulk write failed: %s' % e)
-                log.error(e)
+                log.error('bulk write failed: %s, retry one by one' % e)
                 # retry to write one by one
                 for req in reqs:
                     while True:
                         try:
+                            log.info(req)
                             if isinstance(req, pymongo.ReplaceOne):
                                 self._mc[dbname][collname].replace_one(req._filter, req._doc, upsert=req._upsert)
                             elif isinstance(req, pymongo.InsertOne):
@@ -121,8 +123,11 @@ class MongoHandler(object):
                             # so abort it and bugfix
                             log.error('%s when executing %s on %s.%s' % (e, req, dbname, collname))
                             sys.exit(1)
+                if print_log:
+                    log.info('Processed %d ops on %s.%s, one by one' % (len(reqs), dbname, collname))
 
-    # UpdateOne({
+
+# UpdateOne({
     #     '_id': ObjectId('5e56c076b61867f68c7eb410')
     # },
     #     SON([
