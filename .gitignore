@@ -38,3 +38,6 @@ nosetests.xml
 #
 *.pyc
 tags
+*.toml
+.venv
+.venv2

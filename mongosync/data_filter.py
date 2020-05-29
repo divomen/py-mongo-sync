@@ -92,4 +92,4 @@ if __name__ == '__main__':
     assert f.valid_oplog(oplog8)
     assert f.valid_oplog(oplog9) is False
 
-    print 'test cases all pass'
+    print('test cases all pass')

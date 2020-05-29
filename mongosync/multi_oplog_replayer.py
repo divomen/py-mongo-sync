@@ -1,3 +1,5 @@
+import time
+
 import pymongo
 import gevent
 import mmh3
@@ -15,7 +17,6 @@ class OplogVector(object):
         self._dbname = dbname
         self._collname = collname
         self._oplogs = []
-
 
 class MultiOplogReplayer(object):
     """ Concurrent oplog replayer for MongoDB.
@@ -35,6 +36,7 @@ class MultiOplogReplayer(object):
         self._map = {}
         self._count = 0
         self._last_optime = None
+        self._last_apply_time = time.time()
 
     def clear(self):
         """ Clear oplogs.
@@ -85,6 +87,7 @@ class MultiOplogReplayer(object):
                                  vec._oplogs,
                                  ignore_duplicate_key_error=ignore_duplicate_key_error)
         self._pool.join()
+        self._last_apply_time = time.time()
 
     def count(self):
         """ Return count of oplogs.
@@ -109,7 +112,10 @@ class MultiOplogReplayer(object):
                     is_update = True
                     break
             if is_update:
-                return pymongo.operations.UpdateOne({'_id': oplog['o2']['_id']}, oplog['o'])
+                update = oplog['o']
+                if '$v' in oplog['o']:
+                    del oplog['o']['$v']
+                return pymongo.operations.UpdateOne({'_id': oplog['o2']['_id']}, update)
             else:
                 return pymongo.operations.ReplaceOne({'_id': oplog['o2']['_id']}, oplog['o'], upsert=True)
         elif op == 'i':

@@ -75,4 +75,4 @@ if __name__ == '__main__':
     optime = optime_logger.read()
     assert optime is None
     assert optime_logger.filesize == 0
-    print 'test pass'
+    print('test pass')

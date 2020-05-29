@@ -15,6 +15,7 @@ log = Logger.get()
 class MongoSyncer(CommonSyncer):
     """ MongoDB synchronizer.
     """
+
     def __init__(self, conf):
         CommonSyncer.__init__(self, conf)
 
@@ -33,6 +34,7 @@ class MongoSyncer(CommonSyncer):
     def _create_index(self, namespace_tuple):
         """ Create indexes.
         """
+
         def format(key_direction_list):
             """ Format key and direction of index.
             """
@@ -107,7 +109,9 @@ class MongoSyncer(CommonSyncer):
                         groups.append(reqs)
                         reqs = []
                     if len(groups) == groups_max:
-                        threads = [gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False, ignore_duplicate_key_error=True) for i in xrange(groups_max)]
+                        threads = [
+                            gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False,
+                                         ignore_duplicate_key_error=True) for i in xrange(groups_max)]
                         gevent.joinall(threads, raise_error=True)
                         groups = []
 
@@ -117,7 +121,8 @@ class MongoSyncer(CommonSyncer):
                         n = 0
 
                 if len(groups) > 0:
-                    threads = [gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False, ignore_duplicate_key_error=True) for i in xrange(len(groups))]
+                    threads = [gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False,
+                                            ignore_duplicate_key_error=True) for i in xrange(len(groups))]
                     gevent.joinall(threads, raise_error=True)
                 if len(reqs) > 0:
                     self._dst.bulk_write(dst_dbname, dst_collname, reqs, ordered=False, ignore_duplicate_key_error=True)
@@ -160,7 +165,8 @@ class MongoSyncer(CommonSyncer):
 
         procs = []
         for query in queries:
-            p = multiprocessing.Process(target=self._sync_collection_with_query, args=(namespace_tuple, query, prog_q, res_q))
+            p = multiprocessing.Process(target=self._sync_collection_with_query,
+                                        args=(namespace_tuple, query, prog_q, res_q))
             p.start()
             procs.append(p)
             log.info('start process %s with query %s' % (p.name, query))
@@ -208,7 +214,9 @@ class MongoSyncer(CommonSyncer):
                         groups.append(reqs)
                         reqs = []
                     if len(groups) == groups_max:
-                        threads = [gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False, ignore_duplicate_key_error=True) for i in xrange(groups_max)]
+                        threads = [
+                            gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False,
+                                         ignore_duplicate_key_error=True) for i in xrange(groups_max)]
                         gevent.joinall(threads, raise_error=True)
                         groups = []
 
@@ -219,7 +227,8 @@ class MongoSyncer(CommonSyncer):
                         n = 0
 
                 if len(groups) > 0:
-                    threads = [gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False, ignore_duplicate_key_error=True) for i in xrange(len(groups))]
+                    threads = [gevent.spawn(self._dst.bulk_write, dst_dbname, dst_collname, groups[i], ordered=False,
+                                            ignore_duplicate_key_error=True) for i in xrange(len(groups))]
                     gevent.joinall(threads, raise_error=True)
                 if len(reqs) > 0:
                     self._dst.bulk_write(dst_dbname, dst_collname, reqs, ordered=False, ignore_duplicate_key_error=True)
@@ -310,7 +319,9 @@ class MongoSyncer(CommonSyncer):
                                 need_log = True
                             else:
                                 self._multi_oplog_replayer.push(oplog)
-                                if oplog['ts'] == self._initial_sync_end_optime or self._multi_oplog_replayer.count() == self._oplog_batchsize:
+                                if oplog['ts'] == self._initial_sync_end_optime \
+                                        or self._multi_oplog_replayer.count() >= self._oplog_batchsize \
+                                        or time.time() - self._multi_oplog_replayer._last_apply_time > 3:
                                     self._multi_oplog_replayer.apply(ignore_duplicate_key_error=True)
                                     self._multi_oplog_replayer.clear()
                                     self._last_optime = oplog['ts']
@@ -333,7 +344,7 @@ class MongoSyncer(CommonSyncer):
                                 need_log = True
                             else:
                                 self._multi_oplog_replayer.push(oplog)
-                                if self._multi_oplog_replayer.count() == self._oplog_batchsize:
+                                if self._multi_oplog_replayer.count() >= self._oplog_batchsize:
                                     self._multi_oplog_replayer.apply()
                                     self._multi_oplog_replayer.clear()
                                     self._last_optime = oplog['ts']
@@ -374,8 +385,8 @@ def logging_progress(ns, total, prog_q):
             return
         curr += m
         s = '\t%s\t%d/%d\t[%.2f%%]' % (
-                ns,
-                curr,
-                total,
-                float(curr)/total*100 if total > 0 else float(curr+1)/(total+1)*100)
+            ns,
+            curr,
+            total,
+            float(curr) / total * 100 if total > 0 else float(curr + 1) / (total + 1) * 100)
         log.info(s)

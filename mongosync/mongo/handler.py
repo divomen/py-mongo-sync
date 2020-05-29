@@ -75,6 +75,7 @@ class MongoHandler(object):
     def bulk_write(self, dbname, collname, reqs, ordered=True, ignore_duplicate_key_error=False):
         """ Bulk write until success.
         """
+        log.info('Process %d ops on %s.%s' % (len(reqs), dbname, collname))
         while True:
             try:
                 self._mc[dbname][collname].bulk_write(reqs,
@@ -86,6 +87,7 @@ class MongoHandler(object):
                 self.reconnect()
             except Exception as e:
                 log.error('bulk write failed: %s' % e)
+                log.error(e)
                 # retry to write one by one
                 for req in reqs:
                     while True:
@@ -116,15 +118,27 @@ class MongoHandler(object):
                         except Exception as e:
                             # generally it's an odd oplog that program cannot process
                             # so abort it and bugfix
-                            log.error('%s when excuting %s on %s.%s' % (e, req, dbname, collname))
+                            log.error('%s when executing %s on %s.%s' % (e, req, dbname, collname))
                             sys.exit(1)
 
+    # UpdateOne({
+    #     '_id': ObjectId('5e56c076b61867f68c7eb410')
+    # },
+    #     SON([
+    #         (u'$v', 1),
+    #         (u'$set', SON([
+    #                 (u'company', u'Douglas Elliman'),
+    #                 (u'updatedAt', datetime.datetime(2020, 5, 29, 11, 32, 42, 183000))
+    #             ])
+    #          )
+    #     ]), False, None)
     def tail_oplog(self, start_optime=None, await_time_ms=None):
         """ Return a tailable curosr of local.oplog.rs from the specified optime.
         """
         # set codec options to guarantee the order of keys in command
         coll = self._mc['local'].get_collection('oplog.rs',
-                                                codec_options=bson.codec_options.CodecOptions(document_class=bson.son.SON))
+                                                codec_options=bson.codec_options.CodecOptions(
+                                                    document_class=bson.son.SON))
         cursor = coll.find({'fromMigrate': {'$exists': False}, 'ts': {'$gte': start_optime}},
                            cursor_type=pymongo.cursor.CursorType.TAILABLE_AWAIT,
                            no_cursor_timeout=True)
