@@ -94,7 +94,7 @@ class MongoHandler(object):
                 for req in reqs:
                     while True:
                         try:
-                            log.info(req)
+                            # log.info(req)
                             if isinstance(req, pymongo.ReplaceOne):
                                 self._mc[dbname][collname].replace_one(req._filter, req._doc, upsert=req._upsert)
                             elif isinstance(req, pymongo.InsertOne):
