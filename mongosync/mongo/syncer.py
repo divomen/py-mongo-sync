@@ -54,9 +54,10 @@ class MongoSyncer(CommonSyncer):
         for name, info in index_info.iteritems():
             keys = info['key']
             options = {}
-            if len(name) > 100:
+            if 5 + len(name) + len(dbname) + len(collname) > 127:
+                decrease = 5 + len(name) + len(dbname) + len(collname) - 127
                 # noinspection PyDeprecation
-                options['name'] = name[:100 - 17] + '_' + hashlib.md5(name).hexdigest()[:16]
+                options['name'] = name[:len(name) - decrease - 9] + '_' + hashlib.md5(name).hexdigest()[:8]
                 log.warn(
                     'index name for %s.%s was changed "%s" -> "%s"' % (dst_dbname, dst_collname, name, options['name'])
                 )
