@@ -1,5 +1,7 @@
 import time
 import multiprocessing
+import hashlib
+
 import gevent
 import pymongo
 from pymongo import errors
@@ -52,7 +54,14 @@ class MongoSyncer(CommonSyncer):
         for name, info in index_info.iteritems():
             keys = info['key']
             options = {}
-            options['name'] = name
+            if len(name) > 100:
+                # noinspection PyDeprecation
+                options['name'] = name[:100 - 17] + '_' + hashlib.md5(name).hexdigest()[:16]
+                log.warn(
+                    'index name for %s.%s was changed "%s" -> "%s"' % (dst_dbname, dst_collname, name, options['name'])
+                )
+            else:
+                options['name'] = name
             if 'unique' in info:
                 options['unique'] = info['unique']
             if 'sparse' in info:

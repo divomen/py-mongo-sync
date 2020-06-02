@@ -17,7 +17,6 @@ if __name__ == '__main__':
     conf = CommandOptions.parse()
     Logger.init(conf.logfilepath)
     log = Logger.get()
-
     conf.info(log)
     if conf.logfilepath:
         conf.info(sys.stdout)
