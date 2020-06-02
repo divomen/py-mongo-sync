@@ -1,14 +1,15 @@
 import pymongo
 import bson
+from pymongo import errors
 
 
 def gen_uri(hosts, username=None, password=None, authdb='admin'):
-    def parse(hosts):
-        if isinstance(hosts, str) or isinstance(hosts, unicode):
-            return hosts
-        if isinstance(hosts, list) or isinstance(hosts, tuple):
+    def parse(_hosts):
+        if isinstance(_hosts, str) or isinstance(_hosts, unicode):
+            return _hosts
+        if isinstance(_hosts, list) or isinstance(_hosts, tuple):
             hostportstrs = []
-            for host in hosts:
+            for host in _hosts:
                 if isinstance(host, str) or isinstance(host, unicode):
                     hostportstrs.append(host)
                     continue
@@ -16,7 +17,7 @@ def gen_uri(hosts, username=None, password=None, authdb='admin'):
                     hostportstrs.append(parse_tuple(host))
                     continue
             return ','.join(hostportstrs)
-        raise Exception('invalid hosts: %v' % hosts)
+        raise Exception('invalid hosts: %r' % _hosts)
 
     def parse_tuple(host_port_tuple):
         """ host is string and port is int.
@@ -55,7 +56,7 @@ def connect(host, port, **kwargs):
     replset_name = get_replica_set_name(host, port, **kwargs)
     if replset_name:
         mc = pymongo.MongoClient(host=host,
-                                 port=port,
+                                 port=port, ssl=kwargs['ssl'],
                                  document_class=bson.son.SON,
                                  connect=True,
                                  serverSelectionTimeoutMS=3000,
@@ -64,7 +65,7 @@ def connect(host, port, **kwargs):
                                  w=w)
     else:
         mc = pymongo.MongoClient(host,
-                                 port,
+                                 port, ssl=kwargs['ssl'],
                                  document_class=bson.son.SON,
                                  connect=True,
                                  serverSelectionTimeoutMS=3000,
@@ -78,17 +79,9 @@ def connect(host, port, **kwargs):
 def get_version(arg):
     """ Get version.
     """
-    if isinstance(arg, pymongo.MongoClient):
-        return arg.server_info()['version']
-    elif isinstance(arg, str) or isinstance(arg, unicode):
-        host, port = parse_hostportstr(arg)
-        with pymongo.MongoClient(host, port, connect=True, serverSelectionTimeoutMS=3000) as mc:
-            return mc.server_info()['version']
-    elif isinstance(arg, tuple):
-        with pymongo.MongoClient(arg[0], arg[1], connect=True, serverSelectionTimeoutMS=3000) as mc:
-            return mc.server_info()['version']
-    else:
-        raise Exception('invalid argument type @%s' % get_version.__name__)
+    host, port = parse_hostportstr(arg.hosts)
+    with pymongo.MongoClient(host, port, ssl=arg.ssl, connect=True, serverSelectionTimeoutMS=3000) as mc:
+        return mc.server_info()['version']
 
 
 def get_replica_set_name(host, port, **kwargs):
@@ -100,7 +93,7 @@ def get_replica_set_name(host, port, **kwargs):
         username = kwargs.get('username', '')
         password = kwargs.get('password', '')
         authdb = kwargs.get('authdb', 'admin')
-        mc = pymongo.MongoClient(host, port, connect=True, serverSelectionTimeoutMS=3000)
+        mc = pymongo.MongoClient(host, port, ssl=kwargs['ssl'], connect=True, serverSelectionTimeoutMS=3000)
         if username and password and authdb:
             mc[authdb].authenticate(username, password)
         status = mc.admin.command({'replSetGetStatus': 1})
@@ -120,7 +113,7 @@ def get_primary(host, port, **kwargs):
         username = kwargs.get('username', '')
         password = kwargs.get('password', '')
         authdb = kwargs.get('authdb', 'admin')
-        mc = pymongo.MongoClient(host, port, connect=True, serverSelectionTimeoutMS=3000)
+        mc = pymongo.MongoClient(host, port, ssl=kwargs['ssl'], connect=True, serverSelectionTimeoutMS=3000)
         if username and password and authdb:
             mc[authdb].authenticate(username, password)
         status = mc.admin.command({'replSetGetStatus': 1})
@@ -146,7 +139,8 @@ def get_optime(mc):
     If using protocolVersion: 1, optime returns a document that contains:
         - ts, the Timestamp of the last operation applied to this member of the replica set from the oplog.
         - t, the term in which the last applied operation was originally generated on the primary.
-    If using protocolVersion: 0, optime returns the Timestamp of the last operation applied to this member of the replica set from the oplog.
+    If using protocolVersion: 0, optime returns the Timestamp of the last operation applied
+    to this member of the replica set from the oplog.
 
     Refer to https://docs.mongodb.com/manual/reference/command/replSetGetStatus/
     """

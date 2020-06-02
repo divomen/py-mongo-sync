@@ -1,4 +1,3 @@
-import sys
 import logging
 import pymongo
 from mongosync.mongo_utils import get_version
@@ -15,11 +14,12 @@ class CheckConfig(object):
 
 
 class MongoConfig(object):
-    def __init__(self, hosts, authdb, username, password):
+    def __init__(self, hosts, authdb, username, password, ssl):
         self.hosts = hosts
         self.authdb = authdb
         self.username = username
         self.password = password
+        self.ssl = ssl
 
 
 class EsConfig(object):
@@ -30,6 +30,7 @@ class EsConfig(object):
 class Config(object):
     """ Configuration.
     """
+
     def __init__(self):
         self.src_conf = None
         self.dst_conf = None
@@ -72,7 +73,8 @@ class Config(object):
     def ns_mapping(self, dbname, collname):
         return '%s.%s' % (self.db_mapping(dbname.strip()), collname.strip())
 
-    def hostportstr(self, hosts):
+    @staticmethod
+    def hostportstr(hosts):
         if isinstance(hosts, str) or isinstance(hosts, unicode):
             return hosts
         elif isinstance(hosts, list):
@@ -82,9 +84,11 @@ class Config(object):
         """ Output to logfile or stdout.
         """
         if isinstance(logger, logging.Logger):
-            f = lambda s: logger.info(s)
+            def f(s):
+                logger.info(s)
         elif isinstance(logger, file):
-            f = lambda s: logger.write('%s\n' % s)
+            def f(s):
+                logger.write('%s\n' % s)
         else:
             raise Exception('error logger')
 
@@ -93,8 +97,8 @@ class Config(object):
         f('src authdb      :  %s' % self.src_conf.authdb)
         f('src username    :  %s' % self.src_conf.username)
         f('src password    :  %s' % self.src_conf.password)
-        if isinstance(self.src_conf.hosts, str) or isinstance(self.src_conf.hosts, unicode):
-            f('src db version  :  %s' % get_version(self.src_conf.hosts))
+        if isinstance(self.src_conf, str) or isinstance(self.src_conf.hosts, unicode):
+            f('src db version  :  %s' % get_version(self.src_conf))
 
         f('dst hostportstr :  %s' % self.dst_hostportstr)
         if isinstance(self.dst_conf, MongoConfig):
@@ -102,9 +106,11 @@ class Config(object):
                 f('dst authdb      :  %s' % self.dst_conf.authdb)
                 f('dst username    :  %s' % self.dst_conf.username)
                 f('dst password    :  %s' % self.dst_conf.password)
-                f('dst db version  :  %s' % get_version(self.dst_conf.hosts))
+                f('dst db version  :  %s' % get_version(self.dst_conf))
 
+        # noinspection PyProtectedMember
         f('databases       :  %s' % ', '.join(self.data_filter._related_dbs))
+        # noinspection PyProtectedMember
         f('collections     :  %s' % ', '.join(self.data_filter._include_colls))
         f('db mapping      :  %s' % self.dbmap_str)
         f('fileds          :  %s' % self.fieldmap_str)

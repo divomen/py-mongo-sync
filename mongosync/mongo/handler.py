@@ -2,6 +2,8 @@ import sys
 import time
 import pymongo
 import bson
+from pymongo import errors
+
 from mongosync import mongo_utils
 from mongosync.config import MongoConfig
 from mongosync.logger import Logger
@@ -25,15 +27,14 @@ class MongoHandler(object):
         try:
             if isinstance(self._conf.hosts, unicode):
                 host, port = mongo_utils.parse_hostportstr(self._conf.hosts)
-                self._mc = mongo_utils.connect(host, port,
+                self._mc = mongo_utils.connect(host, port, ssl=self._conf.ssl,
                                                authdb=self._conf.authdb,
                                                username=self._conf.username,
                                                password=self._conf.password)
                 self._mc.admin.command('ismaster')
                 return True
-            elif isinstance(self._conf.__hosts, list):
-                # TODO
-                return False
+            else:
+                log.error('hosts contains something unsupported %r' % self._conf.hosts)
         except Exception as e:
             log.error('connect failed: %s' % e)
             return False
@@ -75,8 +76,8 @@ class MongoHandler(object):
     def bulk_write(self, dbname, collname, reqs, ordered=True, ignore_duplicate_key_error=False, print_log=False):
         """ Bulk write until success.
         """
-        if print_log:
-            log.info('Process %d ops on %s.%s' % (len(reqs), dbname, collname))
+        # if print_log:
+        #     log.info('Process %d ops on %s.%s' % (len(reqs), dbname, collname))
         while True:
             try:
                 self._mc[dbname][collname].bulk_write(reqs,
@@ -184,7 +185,7 @@ class MongoHandler(object):
                 elif op == 'n':  # no-op
                     pass
                 else:
-                    log.error('invaid op: %s' % oplog)
+                    log.error('invalid op: %s' % oplog)
                 return
             except pymongo.errors.AutoReconnect as e:
                 self.reconnect()
@@ -222,7 +223,7 @@ class MongoHandler(object):
                         log.error('replay update failed: delete old document failed:', oplog['o2'])
                         sys.exit(1)
                     # insert new document
-                    res = self._dst_mc[dbname][collname].insert_one(new_doc)
+                    res = self._mc[dbname][collname].insert_one(new_doc)
                     if not res.inserted_id:
                         log.error('replay update failed: insert new document failed:', new_doc)
                         sys.exit(1)

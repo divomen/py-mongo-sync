@@ -228,7 +228,7 @@ class CommonSyncer(object):
         dbname, collname = namespace_tuple
         return self._src.client()[dbname][collname].count() > self._large_coll_docs
 
-    def _sync_large_collection(self, namespace_tuple):
+    def _sync_large_collection(self, namespace_tuple, split_points):
         """ Sync large collection until success.
         """
         raise NotImplementedError('you should implement %s.%s' % (self.__class__.__name__, self._sync_large_collection.__name__))

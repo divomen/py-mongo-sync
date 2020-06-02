@@ -2,6 +2,7 @@ import time
 import multiprocessing
 import gevent
 import pymongo
+from pymongo import errors
 from mongosync import mongo_utils
 from mongosync.logger import Logger
 from mongosync.config import MongoConfig
@@ -23,12 +24,12 @@ class MongoSyncer(CommonSyncer):
             raise RuntimeError('invalid src config type')
         self._src = MongoHandler(self._conf.src_conf)
         if not self._src.connect():
-            raise RuntimeError('connect to mongodb(src) failed: %s' % self._conf.src_hostportstr)
+            raise RuntimeError('connect to mongodb(src) failed: %s' % self._conf.src.hosts)
         if not isinstance(self._conf.dst_conf, MongoConfig):
             raise RuntimeError('invalid dst config type')
         self._dst = MongoHandler(self._conf.dst_conf)
         if not self._dst.connect():
-            raise RuntimeError('connect to mongodb(dst) failed: %s' % self._conf.dst_hostportstr)
+            raise RuntimeError('connect to mongodb(dst) failed: %s' % self._conf.dst.hosts)
         self._multi_oplog_replayer = MultiOplogReplayer(self._dst, 10)
 
     def _create_index(self, namespace_tuple):

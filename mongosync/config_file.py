@@ -14,13 +14,17 @@ class ConfigFile(object):
         conf.src_conf = MongoConfig(tml['src']['hosts'],
                                     tml['src'].get('authdb', 'admin'),
                                     tml['src'].get('username', ''),
-                                    tml['src'].get('password', ''))
+                                    tml['src'].get('password', ''),
+                                    tml['src'].get('ssl', False),
+                                    )
 
         if type not in tml['dst'] or tml['dst']['type'] == 'mongo':
             conf.dst_conf = MongoConfig(tml['dst']['hosts'],
                                         tml['dst'].get('authdb', 'admin'),
                                         tml['dst'].get('username', ''),
-                                        tml['dst'].get('password', ''))
+                                        tml['dst'].get('password', ''),
+                                        tml['dst'].get('ssl', False),
+                                        )
         elif tml['dst']['type'] == 'es':
             conf.dst_conf = EsConfig(tml['dst']['hosts'])
         else:
