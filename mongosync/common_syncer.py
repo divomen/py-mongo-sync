@@ -8,6 +8,9 @@ from mongosync.logger import Logger
 from mongosync.mongo_utils import get_optime
 from mongosync.optime_logger import OptimeLogger
 from mongosync.progress_logger import LoggerThread
+from pymongo import errors
+import pymongo
+from gevent import pool
 
 log = Logger.get()
 
@@ -34,6 +37,7 @@ class CommonSyncer(object):
         - _sync_large_collection
         - _replay_oplog
     """
+
     def __init__(self, conf):
         if not isinstance(conf, Config):
             raise RuntimeError('invalid config type')
@@ -164,7 +168,15 @@ class CommonSyncer(object):
         if max_chunk_size <= 0:
             return []
 
-        res = db.command('splitVector', ns, keyPattern={'_id': 1}, maxSplitPoints=n_points, maxChunkSize=max_chunk_size, maxChunkObjects=collstats['count'])
+        try:
+            res = db.command('splitVector', ns, keyPattern={'_id': 1}, maxSplitPoints=n_points,
+                             maxChunkSize=max_chunk_size, maxChunkObjects=collstats['count'])
+        except pymongo.errors.OperationFailure as e:
+            if e.details.get('codeName') == u'Unauthorized':
+                log.warn("Can't run splitVector command on %s: consider to give clusterManager role to a user" % ns)
+                res = {'ok': 0}
+            else:
+                raise e
 
         if res['ok'] != 1:
             return []
@@ -174,6 +186,7 @@ class CommonSyncer(object):
     def _initial_sync(self):
         """ Initial sync.
         """
+
         def classify(ns_tuple, large_colls, small_colls):
             """ Find out large and small collections.
             """
@@ -208,7 +221,7 @@ class CommonSyncer(object):
         self._progress_logger.start()
 
         # small collections first
-        pool = gevent.pool.Pool(8)
+        pool = gevent.pool.Pool(20)
         for res in pool.imap(self._sync_collection, small_colls):
             if res is not None:
                 sys.exit(1)
@@ -220,7 +233,8 @@ class CommonSyncer(object):
     def _sync_collection(self, namespace_tuple):
         """ Sync a collection until success.
         """
-        raise NotImplementedError('you should implement %s.%s' % (self.__class__.__name__, self._sync_collection.__name__))
+        raise NotImplementedError(
+            'you should implement %s.%s' % (self.__class__.__name__, self._sync_collection.__name__))
 
     def _is_large_collection(self, namespace_tuple):
         """ Check if large collection or not.
@@ -231,7 +245,8 @@ class CommonSyncer(object):
     def _sync_large_collection(self, namespace_tuple, split_points):
         """ Sync large collection until success.
         """
-        raise NotImplementedError('you should implement %s.%s' % (self.__class__.__name__, self._sync_large_collection.__name__))
+        raise NotImplementedError(
+            'you should implement %s.%s' % (self.__class__.__name__, self._sync_large_collection.__name__))
 
     def _replay_oplog(self, oplog_start):
         """ Replay oplog.
@@ -247,14 +262,16 @@ class CommonSyncer(object):
             time_unit = 'second' if delay <= 1 else 'seconds'
             if tag:
                 log.info('%s - sync to %s - %d %s delay - %s - %s' % (self.from_to,
-                                                                      datetime.datetime.fromtimestamp(self._last_optime.time),
+                                                                      datetime.datetime.fromtimestamp(
+                                                                          self._last_optime.time),
                                                                       delay,
                                                                       time_unit,
                                                                       self._last_optime,
                                                                       tag))
             else:
                 log.info('%s - sync to %s - %d %s delay - %s' % (self.from_to,
-                                                                 datetime.datetime.fromtimestamp(self._last_optime.time),
+                                                                 datetime.datetime.fromtimestamp(
+                                                                     self._last_optime.time),
                                                                  delay,
                                                                  time_unit,
                                                                  self._last_optime))
