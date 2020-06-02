@@ -54,8 +54,8 @@ class MongoSyncer(CommonSyncer):
         for name, info in index_info.iteritems():
             keys = info['key']
             options = {}
-            if 5 + len(name) + len(dbname) + len(collname) > 127:
-                decrease = 5 + len(name) + len(dbname) + len(collname) - 127
+            if 5 + len(name) + len(dst_dbname) + len(dst_collname) > 127:
+                decrease = 5 + len(name) + len(dst_dbname) + len(dst_collname) - 127
                 # noinspection PyDeprecation
                 options['name'] = name[:len(name) - decrease - 9] + '_' + hashlib.md5(name).hexdigest()[:8]
                 log.warn(
