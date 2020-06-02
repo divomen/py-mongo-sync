@@ -111,7 +111,7 @@ class MongoSyncer(CommonSyncer):
                 )
 
                 reqs = []
-                reqs_max = 10000
+                reqs_max = 5000
                 groups = []
                 groups_max = 1
                 n = 0
