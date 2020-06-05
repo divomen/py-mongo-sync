@@ -81,7 +81,7 @@ class MultiOplogReplayer(object):
             #         m = self.__hash(op._filter['_id'])
             #         vecs[m % n]._oplogs.append(op)
             #     oplog_vecs.extend(vecs)
-        start_time = time.time()
+        # start_time = time.time()
         for vec in oplog_vecs:
             if vec._oplogs:
                 self._pool.spawn(self._mongo_handler.bulk_write,
@@ -90,7 +90,7 @@ class MultiOplogReplayer(object):
                                  vec._oplogs,
                                  ignore_duplicate_key_error=ignore_duplicate_key_error, print_log=print_log)
         self._pool.join()
-        log.info('Apply takes %f seconds' % (time.time() - start_time))
+        # log.info('Apply takes %f seconds' % (time.time() - start_time))
         self._last_apply_time = time.time()
 
     def count(self):

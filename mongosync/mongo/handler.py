@@ -145,9 +145,10 @@ class MongoHandler(object):
         coll = self._mc['local'].get_collection('oplog.rs',
                                                 codec_options=bson.codec_options.CodecOptions(
                                                     document_class=bson.son.SON))
-        # todo remove aptbot
         cursor = coll.find(
-            {'fromMigrate': {'$exists': False}, 'ns': {'$ne': 'aptbot.feed'}, 'ts': {'$gte': start_optime}},
+            {'fromMigrate': {'$exists': False},
+             # 'ns': {'$ne': 'aptbot.feed'},
+             'ts': {'$gte': start_optime}},
             cursor_type=pymongo.cursor.CursorType.TAILABLE_AWAIT,
             no_cursor_timeout=True)
         # New in version 3.2
