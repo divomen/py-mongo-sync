@@ -1,3 +1,4 @@
+import re
 import sys
 import argparse
 from bson.timestamp import Timestamp
@@ -26,7 +27,7 @@ class CommandOptions(object):
         parser.add_argument('--dst-authdb', nargs='?', required=False, help="dst authentication database, default is 'admin', for MongoDB")
         parser.add_argument('--dst-username', nargs='?', required=False, help='dst username, for MongoDB')
         parser.add_argument('--dst-password', nargs='?', required=False, help='dst password, for MongoDB')
-        parser.add_argument('--start-optime', type=int, nargs='?', required=False, help='timestamp in second, indicates oplog based increment sync')
+        parser.add_argument('--start-optime', type=str, nargs='?', required=False, help='timestamp in format second,<num>, indicates oplog based increment sync')
         parser.add_argument('--optime-logfile', nargs='?', required=False, help="optime log file path, use this as start optime if without '--start-optime'")
         parser.add_argument('--logfile', nargs='?', required=False, help='log file path')
 
@@ -51,7 +52,10 @@ class CommandOptions(object):
         if args.dst_password is not None:
             conf.dst_conf.password = args.dst_password
         if args.start_optime is not None:
-            conf.start_optime = Timestamp(args.start_optime, 0)
+            m = re.match(r'(\\d)+,(\\d)+', args.start_optime)
+            if m is None:
+                raise RuntimeError('Bad format for start-optime: "%s"' % args.start_optime)
+            conf.start_optime = Timestamp(int(m.group(1)), int(m.group(2)))
         if args.optime_logfile is not None:
             conf.optime_logfilepath = args.optime_logfile
             if args.start_optime is None:
