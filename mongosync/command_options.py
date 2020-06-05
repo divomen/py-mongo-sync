@@ -52,7 +52,7 @@ class CommandOptions(object):
         if args.dst_password is not None:
             conf.dst_conf.password = args.dst_password
         if args.start_optime is not None:
-            m = re.match(r'(\\d)+,(\\d)+', args.start_optime)
+            m = re.match(r'(\d+),(\d+)', args.start_optime)
             if m is None:
                 raise RuntimeError('Bad format for start-optime: "%s"' % args.start_optime)
             conf.start_optime = Timestamp(int(m.group(1)), int(m.group(2)))
