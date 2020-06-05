@@ -127,8 +127,7 @@ class MongoHandler(object):
                 if print_log:
                     log.info('Processed %d ops on %s.%s, one by one' % (len(reqs), dbname, collname))
 
-
-# UpdateOne({
+    # UpdateOne({
     #     '_id': ObjectId('5e56c076b61867f68c7eb410')
     # },
     #     SON([
@@ -146,9 +145,11 @@ class MongoHandler(object):
         coll = self._mc['local'].get_collection('oplog.rs',
                                                 codec_options=bson.codec_options.CodecOptions(
                                                     document_class=bson.son.SON))
-        cursor = coll.find({'fromMigrate': {'$exists': False}, 'ts': {'$gte': start_optime}},
-                           cursor_type=pymongo.cursor.CursorType.TAILABLE_AWAIT,
-                           no_cursor_timeout=True)
+        # todo remove aptbot
+        cursor = coll.find(
+            {'fromMigrate': {'$exists': False}, 'ns': {'$ne': 'aptbot.feed'}, 'ts': {'$gte': start_optime}},
+            cursor_type=pymongo.cursor.CursorType.TAILABLE_AWAIT,
+            no_cursor_timeout=True)
         # New in version 3.2
         # src_version = mongo_utils.get_version(self._mc)
         # if mongo_utils.version_higher_or_equal(src_version, '3.2.0'):

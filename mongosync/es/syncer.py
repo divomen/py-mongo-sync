@@ -2,6 +2,7 @@ import time
 import gevent
 import pymongo
 import bson
+from pymongo import errors
 import elasticsearch
 import elasticsearch.helpers
 from mongosync.logger import Logger
@@ -18,6 +19,7 @@ log = Logger.get()
 class EsSyncer(CommonSyncer):
     """ Elasticsearch synchronizer.
     """
+
     def __init__(self, conf):
         CommonSyncer.__init__(self, conf)
 
@@ -37,7 +39,7 @@ class EsSyncer(CommonSyncer):
         self._last_bulk_optime = None
 
     def _action_buf_full(self):
-        return len(self._action_buf) >= 40
+        return len(self._action_buf) >= 400
 
     def _sync_database(self, dbname):
         """ Sync a database.
@@ -82,7 +84,8 @@ class EsSyncer(CommonSyncer):
                     del doc['_id']
                     source = gen_doc_with_fields(doc, fields) if fields else doc
                     if source:
-                        actions.append({'_op_type': 'index', '_index': idxname, '_type': typename, '_id': id, '_source': source})
+                        actions.append(
+                            {'_op_type': 'index', '_index': idxname, '_type': typename, '_id': id, '_source': source})
                     if len(actions) == actions_max:
                         groups.append(actions)
                         actions = []
@@ -93,7 +96,8 @@ class EsSyncer(CommonSyncer):
 
                     n += 1
                     if n % 1000 == 0:
-                        log.info('    %s.%s %d/%d (%.2f%%)' % (src_dbname, src_collname, n, count, float(n)/count*100))
+                        log.info(
+                            '    %s.%s %d/%d (%.2f%%)' % (src_dbname, src_collname, n, count, float(n) / count * 100))
 
                 if len(groups) > 0:
                     threads = [gevent.spawn(self._dst.bulk_write, groups[i]) for i in xrange(len(groups))]
@@ -101,7 +105,7 @@ class EsSyncer(CommonSyncer):
                 if len(actions) > 0:
                     elasticsearch.helpers.bulk(client=self._dst.client(), actions=actions)
 
-                log.info('    %s.%s %d/%d (%.2f%%)' % (src_dbname, src_collname, n, count, float(n)/count*100))
+                log.info('    %s.%s %d/%d (%.2f%%)' % (src_dbname, src_collname, n, count, float(n) / count * 100))
                 return
             except pymongo.errors.AutoReconnect:
                 self._src.reconnect()
@@ -121,7 +125,8 @@ class EsSyncer(CommonSyncer):
                 log.info('try to sync oplog from %s on %s:%d' % (self._last_bulk_optime, host, port))
                 # set codec options to guarantee the order of keys in command
                 coll = self._src.client()['local'].get_collection('oplog.rs',
-                                                                  codec_options=bson.codec_options.CodecOptions(document_class=bson.son.SON))
+                                                                  codec_options=bson.codec_options.CodecOptions(
+                                                                      document_class=bson.son.SON))
                 cursor = coll.find({'ts': {'$gte': oplog_start}},
                                    cursor_type=pymongo.cursor.CursorType.TAILABLE_AWAIT,
                                    no_cursor_timeout=True)
@@ -170,7 +175,9 @@ class EsSyncer(CommonSyncer):
                             if fields:
                                 doc = gen_doc_with_fields(doc, fields)
                             if doc:
-                                self._action_buf.append({'_op_type': 'index', '_index': idxname, '_type': typename, '_id': id, '_source': doc})
+                                self._action_buf.append(
+                                    {'_op_type': 'index', '_index': idxname, '_type': typename, '_id': id,
+                                     '_source': doc})
 
                         elif op == 'u':  # update
                             dbname, collname = parse_namespace(ns)
@@ -200,7 +207,8 @@ class EsSyncer(CommonSyncer):
                                     if not fields or keypath in fields:
                                         pos = keypath.rfind('.')
                                         if pos >= 0:
-                                            script_statements.append('ctx._source.%s.remove("%s")' % (keypath[:pos], keypath[pos+1:]))
+                                            script_statements.append(
+                                                'ctx._source.%s.remove("%s")' % (keypath[:pos], keypath[pos + 1:]))
                                         else:
                                             script_statements.append('ctx._source.remove("%s")' % keypath)
                                 if script_statements:
@@ -219,7 +227,8 @@ class EsSyncer(CommonSyncer):
                             dbname, collname = parse_namespace(ns)
                             idxname, typename = self._conf.db_coll_mapping(dbname, collname)
                             id = str(oplog['o']['_id'])
-                            self._action_buf.append({'_op_type': 'delete', '_index': idxname, '_type': typename, '_id': id})
+                            self._action_buf.append(
+                                {'_op_type': 'delete', '_index': idxname, '_type': typename, '_id': id})
 
                         elif op == 'c':  # command
                             dbname, _ = parse_namespace(ns)
@@ -243,9 +252,9 @@ class EsSyncer(CommonSyncer):
                             self._dst.bulk_write(self._action_buf)
                             self._action_buf = []
                             self._last_bulk_optime = oplog['ts']
+                            self._log_optime(self._last_bulk_optime)
 
                         self._last_optime = oplog['ts']
-                        self._log_optime(oplog['ts'])
                         self._log_progress()
                     except StopIteration as e:
                         # flush
@@ -253,7 +262,7 @@ class EsSyncer(CommonSyncer):
                             self._dst.bulk_write(self._action_buf)
                             self._action_buf = []
                             self._last_bulk_optime = self._last_optime
-                        self._log_optime(self._last_optime)
+                        self._log_optime(self._last_bulk_optime)
                         self._log_progress('latest')
                         time.sleep(0.1)
                     except pymongo.errors.AutoReconnect as e:
